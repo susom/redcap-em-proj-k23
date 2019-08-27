@@ -1,0 +1,136 @@
+{
+  "name": "K23 Project",
+
+  "namespace":"Stanford\\ProjK23",
+
+  "description": "Project-specific em",
+
+  "versions": [
+    { "0.1": "Initial" }
+  ],
+
+  "authors": [
+    {
+      "name": "Andrew Martin",
+      "email": "andy123@stanford.edu",
+      "institution": "Stanford University"
+    },
+    {
+      "name": "Jae Lee",
+      "email": "jael@stanford.edu",
+      "institution": "Stanford University"
+    }
+  ],
+
+  "permissions": [
+    "redcap_save_record"
+  ],
+
+  "links": {
+    "control-center": [
+    ],
+    "project": [
+      {
+        "name": "K23 Test",
+        "icon": "gear",
+        "url": "test.php"
+      }
+    ]
+  },
+
+  "system-settings": [
+    {
+      "key": "enable-system-debug-logging",
+      "name": "<b>Enable Debug Logging</b><br>If you have the Stanford emLogger external module installed and configured, you can enable additional debug-level logging through this checkbox</b>",
+      "required": false,
+      "type": "checkbox"
+    }
+  ],
+
+  "project-settings": [
+    {
+      "key": "enable-project-debug-logging",
+      "name": "<b>Enable Debug Logging</b>",
+      "required": false,
+      "type": "checkbox"
+    },
+    {
+      "key": "triggering-instrument",
+      "name": "<div class='alert alert-success'><b>Participant Setup Instrument</b><br>The survey instrument that triggers the survey portal.  This form contains the randomization group, emails, phones and start dates",
+      "required": false,
+      "type": "form-list"
+    },
+    {
+      "key": "trigger-event-name",
+      "name": "<div class='alert alert-success'><b>Participant Setup Event Name</b><br>Name of event where 'Participatn Setup' form is enabled.</div>",
+      "required": false,
+      "type": "event-list"
+    },
+    {
+      "key": "phone-field",
+      "name": "<b>Phone Field</b><br>Field where phone is recorded for this participant (to be used for survey invites/reminders ",
+      "required": false,
+      "type": "field-list"
+    },
+    {
+      "key": "email-field",
+      "name": "<b>Email Field</b><BR>Field where email is recorded for this participant (to be used for survey invtes/reminders ",
+      "required": false,
+      "type": "field-list"
+    },
+    {
+      "key": "enrolled-field",
+      "name": "<b>Participant Level: Randomized and Enrolled to Treatment.",
+      "required": false,
+      "type": "field-list"
+    },
+    {
+      "key": "baseline-date-field",
+      "name": "<b>Baseline Date Field</b><br>This TEXT field is the date that corresponds to the Baseline Start Date ",
+      "required": false,
+      "type": "field-list"
+    },
+    {
+      "key": "class-date-field",
+      "name": "<b>Class Date Field</b><br>This TEXT field is the date that corresponds to the Class Date",
+      "required": false,
+      "type": "field-list"
+    },
+    {
+      "key": "main-config-event-name",
+      "name": "<div class='alert alert-success'><b>Main Config Event Name</b><br>Name of event where 'RSP Participant Info' form is enabled.</div>",
+      "required": false,
+      "type": "event-list"
+    },
+    {
+      "key": "main-config-form-name",
+      "name": "<b>Main Config Form Name</b><br>Name of form where config fields are stored",
+      "required": false,
+      "type": "form-list"
+    },
+    {
+      "key": "config-field",
+      "name": "<b>Config Field</b><br>This TEXT field that contains the Survey config id (i.e. baseline_dailies, followup_dailies",
+      "required": false,
+      "type": "field-list"
+    },
+    {
+      "key": "hash-field",
+      "name": "<b>Hash Field</b><br>This TEXT field that contains the hash for the portal",
+      "required": false,
+      "type": "field-list"
+    },
+    {
+      "key": "baseline-dailies-event-name",
+      "name": "<div class='alert alert-success'><b>Baseline Surveys Event Name</b><br>Name of event where 'Baseline' surveys are enabled.</div>",
+      "required": false,
+      "type": "event-list"
+    },
+    {
+      "key": "followup-dailies-event-name",
+      "name": "<div class='alert alert-success'><b>Baseline Surveys Event Name</b><br>Name of event where 'Followup' surveys are enabled.</div>",
+      "required": false,
+      "type": "event-list"
+    }
+  ]
+}
