@@ -24,39 +24,46 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
         $hash_field         = $this->getProjectSetting('hash-field');
 
         if ($instrument == $target_form) {
-            //check that the target forms haven't already been created
-            $params = array(
-                'return_format'       => 'json',
-                'records'             => $record,
-                'fields'              => array($config_field,$hash_field),
-                'events'              => $config_event
+            $auto_create_field    = $this->getProjectSetting('auto-create-field');
+
+
+
+                //check that the target forms haven't already been created
+                $params = array(
+                    'return_format' => 'json',
+                    'records' => $record,
+                    'fields' => array($config_field, $hash_field, $auto_create_field),
+                    'events' => $config_event
 //                'redcap_repeat_instrument' => $instrument,       //this doesn't restrict
 //                'redcap_repeat_instance'   => $repeat_instance   //this doesn't seem to do anything!
-            );
+                );
 
-            $q = REDCap::getData($params);
-            $results = json_decode($q, true);
+                $q = REDCap::getData($params);
+                $results = json_decode($q, true);
 
-            $this->emDebug($params,$results, $config_field);
+            //$this->emDebug($params, $results, $config_field); //exit;
+            //$this->emDebug("CREATE FIELD ? : ".$results[0][$auto_create_field.'___1'] );
 
-            //check if baseline dailies and followup_dailies are set
-            $base_key = array_search('baseline_dailies', array_column($results, 'rsp_prt_config_id'));
-            $this->emDebug("RECID: ".$record. " KEY: ".$base_key. " KEY IS NULL: ". empty($base_key). " : " . isset($base_key) );
-            if (empty($base_key)) {
-                $this->emDebug("BASE NOT SET: RECID: ".$record. " KEY: ".$base_key. " KEY IS NULL: ". empty($base_key). " : " . isset($base_key) );
+            //check if checkbox to autocreate is set
+            if ($results[0][$auto_create_field.'___1'] == 1) {
 
-                $this->addRSPParticipantInfoForm('baseline_dailies',$record, $event_id,'baseline-date-field');
+                //check if baseline dailies rsp form is already set
+                $base_key = array_search('baseline_dailies', array_column($results, 'rsp_prt_config_id'));
+                $this->emDebug("RECID: " . $record . " KEY: " . $base_key . " KEY IS NULL: " . empty($base_key) . " : " . isset($base_key));
+                if (empty($base_key)) {
 
-            }
+                    $this->addRSPParticipantInfoForm('baseline_dailies', $record, $event_id, 'baseline-date-field');
 
-            //check if followup_dailies are set
-            $fup_key = array_search('followup_dailies', array_column($results, 'rsp_prt_config_id'));
-            $this->emDebug("RECID: ".$record. " KEY: ".$fup_key. " KEY IS NULL: ". empty($fup_key). " : ". isset($fup_key));
-            if (empty($fup_key)) {
-                $this->emDebug("FUP NOT SET: RECID: ".$record. " KEY: ".$base_key. " KEY IS NULL: ". empty($base_key). " : " . isset($base_key) );
+                }
 
-                $this->addRSPParticipantInfoForm('followup_dailies',$record, $event_id,'class-date-field');
+                //check if followup_dailies are set
+                $fup_key = array_search('followup_dailies', array_column($results, 'rsp_prt_config_id'));
+                $this->emDebug("RECID: " . $record . " KEY: " . $fup_key . " KEY IS NULL: " . empty($fup_key) . " : " . isset($fup_key));
+                if (empty($fup_key)) {
 
+                    $this->addRSPParticipantInfoForm('followup_dailies', $record, $event_id, 'class-date-field');
+
+                }
             }
         }
 
@@ -76,8 +83,6 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
         $email_field        = $this->getProjectSetting('email-field');
         $phone_field        = $this->getProjectSetting('phone-field');
 
-
-
         $params = array(
             'return_format'       => 'json',
             'records'             => $record,
@@ -90,8 +95,8 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
             $q = REDCap::getData($params);
             $results = json_decode($q, true);
 
-        $this->emDebug($params,$results, count(array_filter($results[0])),$results[0][$email_field], $results[0][$phone_field],
-            empty($results[0][$email_field]),empty($results[0][$phone_field]));
+        //$this->emDebug($params,$results, count(array_filter($results[0])),$results[0][$email_field], $results[0][$phone_field],
+//            empty($results[0][$email_field]),empty($results[0][$phone_field]));
 
         if (count(array_filter($results[0])) < 4) {
                 return false;
@@ -109,10 +114,11 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
     function addRSPParticipantInfoForm($config_id, $record, $event_id, $start_date_field) {
         $config_event         = $this->getProjectSetting('main-config-event-name');
 
-        $baseline_status = $this->getEnteredData($record, $event_id);
+        //this no longer needed since we are using the checkbox.
+        //$baseline_status = $this->getEnteredData($record, $event_id);
 
-        if ($baseline_status ) {
-            $this->emDebug($baseline_status);
+
+        //if ($baseline_status ) {
 
             $new_hash = $this->generateUniquePersonalHash('rsp_prt_portal_hash', $config_event);
             $portal_url = $this->getUrl("src/landing.php", true, true);
@@ -129,9 +135,9 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
                 'rsp_prt_portal_url' => $new_hash_url
             );
             $this->saveRSPParticipantInfo('baseline_dailies', $record, $config_event, $data_array);
-        } else {
-            $this->emDebug("Field not set yet");
-        }
+//        } else {
+//            $this->emDebug("Field not set yet");
+//        }
 
     }
 
@@ -149,7 +155,7 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
 
         $data = array_merge($params, $data_array);
 
-        $this->emDebug($params, $data);
+        //$this->emDebug($params, $data);
 
         //$new_instance[$record_id]['repeat_instances'][$event_id][$instrument][$next_instance_id] = $data_array;
         //$result = REDCap::saveData($this->getProjectId(), 'array', $new_instance);
