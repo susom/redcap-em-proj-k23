@@ -98,24 +98,25 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
         //$this->emDebug($params,$results, count(array_filter($results[0])),$results[0][$email_field], $results[0][$phone_field],
 //            empty($results[0][$email_field]),empty($results[0][$phone_field]));
 
-        if (count(array_filter($results[0])) < 4) {
-                return false;
-        } else {
-
-            if (empty($results[0][$email_field]) and (empty($results[0][$phone_field]))) {
-                return false;
-            }
-
-        }
-        return array(true, $results[0]);
+        //this check is no longer needed as it uses the checkbox
+//        if (count(array_filter($results[0])) < 4) {
+//                return false;
+//        } else {
+//
+//            if (empty($results[0][$email_field]) and (empty($results[0][$phone_field]))) {
+//                return false;
+//            }
+//
+//        }
+        return $results[0];
 
     }
 
     function addRSPParticipantInfoForm($config_id, $record, $event_id, $start_date_field) {
         $config_event         = $this->getProjectSetting('main-config-event-name');
 
-        //this no longer needed since we are using the checkbox.
-        //$baseline_status = $this->getEnteredData($record, $event_id);
+        $entered_data = $this->getEnteredData($record, $event_id);
+        //$this->emDebug($entered_data);
 
 
         //if ($baseline_status ) {
@@ -127,10 +128,10 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
             $new_hash_url = $new_portal_url . "&h=" . $new_hash . "&c=" . $config_id;
 
             $data_array = array(
-                'rsp_prt_start_date' => $baseline_status[1][$this->getProjectSetting($start_date_field)],
+                'rsp_prt_start_date' => $entered_data[$this->getProjectSetting($start_date_field)],
                 'rsp_prt_config_id' => $config_id, //i.e. 'baseline_daililes' or 'followup_dailies'
-                'rsp_prt_portal_phone' => $baseline_status[1][$this->getProjectSetting('phone-field')],
-                'rsp_prt_portal_email' => $baseline_status[1][$this->getProjectSetting('email-field')],
+                'rsp_prt_portal_phone' => $entered_data[$this->getProjectSetting('phone-field')],
+                'rsp_prt_portal_email' => $entered_data[$this->getProjectSetting('email-field')],
                 'rsp_prt_portal_hash' => $new_hash,
                 'rsp_prt_portal_url' => $new_hash_url
             );
