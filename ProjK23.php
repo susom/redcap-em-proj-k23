@@ -19,52 +19,76 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
 
         $target_form         = $this->getProjectSetting('triggering-instrument');
         $config_event         = $this->getProjectSetting('main-config-event-name');
-
         $config_field         = $this->getProjectSetting('config-field');
-        $hash_field         = $this->getProjectSetting('hash-field');
+        $target_instrument    = $this->getProjectSetting('target-instrument');
 
         if ($instrument == $target_form) {
             $auto_create_field    = $this->getProjectSetting('auto-create-field');
 
 
 
-                //check that the target forms haven't already been created
-                $params = array(
+            //check that the target forms haven't already been created
+            $params = array(
                     'return_format' => 'json',
                     'records' => $record,
-                    'fields' => array($config_field, $hash_field, $auto_create_field),
+                    'fields' => array($config_field, $auto_create_field),
                     'events' => $config_event
 //                'redcap_repeat_instrument' => $instrument,       //this doesn't restrict
 //                'redcap_repeat_instance'   => $repeat_instance   //this doesn't seem to do anything!
-                );
+            );
 
-                $q = REDCap::getData($params);
-                $results = json_decode($q, true);
+            $q = REDCap::getData($params);
+            $results = json_decode($q, true);
 
             //$this->emDebug($params, $results, $config_field); //exit;
             //$this->emDebug("CREATE FIELD ? : ".$results[0][$auto_create_field.'___1'] );
 
-            //check if checkbox to autocreate is set
-            if ($results[0][$auto_create_field.'___1'] == 1) {
+            $baseline_set = array_search('baseline_dailies', array_column($results, 'rsp_prt_config_id'));
+            $this->emDebug("RECID: " . $record . " KEY: " . $baseline_set . " KEY IS NULL: " . empty($baseline_set) . " : " . isset($baseline_set));
 
-                //check if baseline dailies rsp form is already set
-                $base_key = array_search('baseline_dailies', array_column($results, 'rsp_prt_config_id'));
-                $this->emDebug("RECID: " . $record . " KEY: " . $base_key . " KEY IS NULL: " . empty($base_key) . " : " . isset($base_key));
-                if (empty($base_key)) {
+            $fup_set = array_search('followup_dailies', array_column($results, 'rsp_prt_config_id'));
+            $this->emDebug("RECID: " . $record . " KEY: " . $fup_set . " KEY IS NULL: " . empty($fup_set) . " : " . isset($fup_set));
 
-                    $this->addRSPParticipantInfoForm('baseline_dailies', $record, $event_id, 'baseline-date-field',1);
 
+            //handle BASELINE
+            $bl_date_field      = $this->getProjectSetting('baseline-date-field');
+            //check if baseline dailies rsp form is already set
+            if (empty($baseline_set)) {
+                //check if checkbox to autocreate is set
+                if ($results[0][$auto_create_field.'___1'] == 1) {
+
+                    //creating a new instance
+                    $bl_repeat_instance = $this->getNextRepeatingInstanceID($record, $target_instrument,$config_event);
+                    $this->emDebug("NEXT Repeating Instance ID for  $record_id  IS ".$bl_repeat_instance);
+                    $this->updateRSPParticipantInfoForm('baseline_dailies', $record, $event_id, $bl_date_field,$bl_repeat_instance);
                 }
-
-                //check if followup_dailies are set
-                $fup_key = array_search('followup_dailies', array_column($results, 'rsp_prt_config_id'));
-                $this->emDebug("RECID: " . $record . " KEY: " . $fup_key . " KEY IS NULL: " . empty($fup_key) . " : " . isset($fup_key));
-                if (empty($fup_key)) {
-
-                    $this->addRSPParticipantInfoForm('followup_dailies', $record, $event_id, 'class-date-field',2);
-
-                }
+            } else {
+                //assuming that 1 is baseline, 2 is followup
+                $bl_repeat_instance = 1;
+                $this->updateRSPParticipantInfoForm('baseline_dailies', $record, $event_id, $bl_date_field,$bl_repeat_instance);
             }
+
+            //only checking that the config id is set. should i also be checking that a hash was successfully created?
+
+
+            //handle FOLLOWUP
+            $fup_date_field      = $this->getProjectSetting('class-date-field');
+            //check if followup_dailies are set
+            if (empty($fup_set)) {
+                if ($results[0][$auto_create_field.'___1'] == 1) {
+                    $fup_repeat_instance = $this->getNextRepeatingInstanceID($record, $target_instrument,$config_event);
+                    $this->emDebug("NEXT Repeating Instance ID for  $record_id  IS ".$fup_repeat_instance);
+                    $this->updateRSPParticipantInfoForm('followup_dailies', $record, $event_id, $fup_date_field,$fup_repeat_instance);
+                }
+
+            } else {
+                //assuming that 1 is baseline, 2 is followup
+                $fup_repeat_instance = 2;
+                $this->updateRSPParticipantInfoForm('followup_dailies', $record, $event_id, $fup_date_field,$fup_repeat_instance);
+            }
+
+
+
         }
 
     }
@@ -82,11 +106,16 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
         $class_date_field        = $this->getProjectSetting('class-date-field');
         $email_field        = $this->getProjectSetting('email-field');
         $phone_field        = $this->getProjectSetting('phone-field');
+        $disable_email_field = $this->getProjectSetting('disable-email-field');
+        $disable_sms_field   = $this->getProjectSetting('disable-sms-field');
+        $stop_baseline_field = $this->getProjectSetting('stop-baseline-field');
+        $stop_followup_field = $this->getProjectSetting('stop-fup-field');
 
         $params = array(
             'return_format'       => 'json',
             'records'             => $record,
-            'fields'              => array($enrolled_form_field,$baseline_date_field, $class_date_field,$email_field,$phone_field),
+            'fields'              => array($enrolled_form_field,$baseline_date_field, $class_date_field,$email_field,$phone_field,
+                $disable_email_field,$disable_sms_field,$stop_baseline_field,$stop_followup_field),
             'events'              => $event
 //                'redcap_repeat_instrument' => $instrument,       //this doesn't restrict
 //                'redcap_repeat_instance'   => $repeat_instance   //this doesn't seem to do anything!
@@ -112,9 +141,10 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
 
     }
 
-    function addRSPParticipantInfoForm($config_id, $record, $event_id, $start_date_field, $repeat_instance) {
-        $config_event         = $this->getProjectSetting('main-config-event-name');
-        $target_instrument    = $this->getProjectSetting('target-instrument');
+    function updateRSPParticipantInfoForm($config_id, $record, $event_id, $start_date_field, $repeat_instance)
+    {
+        $config_event = $this->getProjectSetting('main-config-event-name');
+        $target_instrument = $this->getProjectSetting('target-instrument');
 
         if (!isset($target_instrument)) {
             $this->emError("Target instrument is not set in the EM config. Data will not be transferred. Set config for target-instrument.");
@@ -125,33 +155,50 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
         //$this->emDebug($entered_data);
 
         $data_array = array(
-            'rsp_prt_start_date' => $entered_data[$this->getProjectSetting($start_date_field)],
+            'rsp_prt_start_date' => $entered_data[$start_date_field],
             'rsp_prt_config_id' => $config_id, //i.e. 'baseline_daililes' or 'followup_dailies'
             'rsp_prt_portal_phone' => $entered_data[$this->getProjectSetting('phone-field')],
-            'rsp_prt_portal_email' => $entered_data[$this->getProjectSetting('email-field')]
+            'rsp_prt_portal_email' => $entered_data[$this->getProjectSetting('email-field')],
+            'rsp_prt_portal_phone' => $entered_data[$this->getProjectSetting('phone-field')]
         );
+
+        //handle the checkboxes
+        $data_array['rsp_prt_disable_email___1']  = $entered_data[$this->getProjectSetting('disable-email-field'). '___1'];
+        $data_array['rsp_prt_disable_sms___1']    = $entered_data[$this->getProjectSetting('disable-sms-field'). '___1'];
+
+        //unset the checkbox so we stop getting the warning that the value is set
+        $data_array['k23_auto_setup_rsp___1']     = 0;
+
+
+        //add the baseline vs followup specific disable checkbox
+        switch ($config_id) {
+            case 'baseline_dailies':
+                $data_array['rsp_prt_disable_portal___1'] = $entered_data[$this->getProjectSetting('stop-baseline-field') . '___1'];
+                break;
+            case 'followup_dailies':
+                $data_array['rsp_prt_disable_portal___1'] = $entered_data[$this->getProjectSetting('stop-fup-field') . '___1'];
+                break;
+        }
+
+        //$this->emDebug($data_array, $entered_data, $this->getProjectSetting('stop-baseline-field'), $entered_data[$this->getProjectSetting('stop-baseline-field') . '___1'], $entered_data[$this->getProjectSetting('stop-fup-field') . '___1']);
+
         //save the data
-        $this->saveRSPParticipantInfo('baseline_dailies', $record, $config_event, $data_array,$target_instrument);
+        $this->saveRSPParticipantInfo($record, $config_event, $data_array, $target_instrument,$repeat_instance);
 
         //trigger the hash creation and sending of the email by triggering the redcap_save_record hook on  the rsp_participant_info form
         // \Hooks::call('redcap_save_record', array($child_pid, $child_id, $_GET['page'], $child_event_name, $group_id, null, null, $_GET['instance']));
-        \Hooks::call('redcap_save_record', array($this->getProjectId(), $record, $target_instrument, $config_event, null, null, null,$repeat_instance));
-//        } else {
-//            $this->emDebug("Field not set yet");
-//        }
-
+        \Hooks::call('redcap_save_record', array($this->getProjectId(), $record, $target_instrument, $config_event, null, null, null, $repeat_instance));
     }
 
-    function saveRSPParticipantInfo($config_type,$record_id, $event_id, $data_array, $instrument) {
+
+    function saveRSPParticipantInfo($record_id, $event_id, $data_array, $instrument,$repeat_instance) {
         //$instrument = 'rsp_participant_info';
 
-        $next_instance_id = $this->getNextRepeatingInstanceID($record_id, $instrument, $event_id);
-        $this->emDebug("NEXT Repeating Instance ID for  $record_id  IS ".$next_instance_id);
         $params = array(
             REDCap::getRecordIdField()                => $record_id,
             //'events'                                  => $event_id,
             'redcap_repeat_instrument'                => $instrument,
-            'redcap_repeat_instance'                  => $next_instance_id
+            'redcap_repeat_instance'                  => $repeat_instance
         );
 
         $data = array_merge($params, $data_array);

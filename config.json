@@ -116,8 +116,26 @@
       "type": "field-list"
     },
     {
-      "key": "hash-field",
-      "name": "<b>Hash Field</b><br>This TEXT field that contains the hash for the portal",
+      "key": "stop-baseline-field",
+      "name": "<b>Stop Baseline Dailies Checkbox Field</b><br>The CHECKBOX field that disables baseline dailies",
+      "required": false,
+      "type": "field-list"
+    },
+    {
+      "key": "stop-fup-field",
+      "name": "<b>Stop Followup Dailies Checkbox Field</b><br>The CHECKBOX field that disables followup dailies",
+      "required": false,
+      "type": "field-list"
+    },
+    {
+      "key": "disable-email-field",
+      "name": "<b>Disable Email Checkbox Field</b><br>The CHECKBOX field that disables emails for the dailies",
+      "required": false,
+      "type": "field-list"
+    },
+    {
+      "key": "disable-sms-field",
+      "name": "<b>Disable SMS Checkbox Field</b><br>The CHECKBOX field that disables sms for the dailies",
       "required": false,
       "type": "field-list"
     },
