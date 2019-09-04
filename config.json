@@ -62,6 +62,12 @@
       "type": "event-list"
     },
     {
+      "key": "target-instrument",
+      "name": "<b>Save Target Instrument</b><br>If this field is specified, after the Participant Setup Instrument is populated, the fields will be saved to this instrument and the save record hook will be called.<br>If using the default RSP forms, this form should be RSP Participant Info Instrument",
+      "required": false,
+      "type": "form-list"
+    },
+    {
       "key": "phone-field",
       "name": "<b>Phone Field</b><br>Field where phone is recorded for this participant (to be used for survey invites/reminders ",
       "required": false,

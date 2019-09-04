@@ -52,7 +52,7 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
                 $this->emDebug("RECID: " . $record . " KEY: " . $base_key . " KEY IS NULL: " . empty($base_key) . " : " . isset($base_key));
                 if (empty($base_key)) {
 
-                    $this->addRSPParticipantInfoForm('baseline_dailies', $record, $event_id, 'baseline-date-field');
+                    $this->addRSPParticipantInfoForm('baseline_dailies', $record, $event_id, 'baseline-date-field',1);
 
                 }
 
@@ -61,7 +61,7 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
                 $this->emDebug("RECID: " . $record . " KEY: " . $fup_key . " KEY IS NULL: " . empty($fup_key) . " : " . isset($fup_key));
                 if (empty($fup_key)) {
 
-                    $this->addRSPParticipantInfoForm('followup_dailies', $record, $event_id, 'class-date-field');
+                    $this->addRSPParticipantInfoForm('followup_dailies', $record, $event_id, 'class-date-field',2);
 
                 }
             }
@@ -112,41 +112,41 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
 
     }
 
-    function addRSPParticipantInfoForm($config_id, $record, $event_id, $start_date_field) {
+    function addRSPParticipantInfoForm($config_id, $record, $event_id, $start_date_field, $repeat_instance) {
         $config_event         = $this->getProjectSetting('main-config-event-name');
+        $target_instrument    = $this->getProjectSetting('target-instrument');
+
+        if (!isset($target_instrument)) {
+            $this->emError("Target instrument is not set in the EM config. Data will not be transferred. Set config for target-instrument.");
+            return false;
+        }
 
         $entered_data = $this->getEnteredData($record, $event_id);
         //$this->emDebug($entered_data);
 
+        $data_array = array(
+            'rsp_prt_start_date' => $entered_data[$this->getProjectSetting($start_date_field)],
+            'rsp_prt_config_id' => $config_id, //i.e. 'baseline_daililes' or 'followup_dailies'
+            'rsp_prt_portal_phone' => $entered_data[$this->getProjectSetting('phone-field')],
+            'rsp_prt_portal_email' => $entered_data[$this->getProjectSetting('email-field')]
+        );
+        //save the data
+        $this->saveRSPParticipantInfo('baseline_dailies', $record, $config_event, $data_array,$target_instrument);
 
-        //if ($baseline_status ) {
-
-            $new_hash = $this->generateUniquePersonalHash('rsp_prt_portal_hash', $config_event);
-            $portal_url = $this->getUrl("src/landing.php", true, true);
-            //hack to change prefix from k_23 to survey_portal
-            $new_portal_url = str_replace("proj_k23", "survey_portal", $portal_url);
-            $new_hash_url = $new_portal_url . "&h=" . $new_hash . "&c=" . $config_id;
-
-            $data_array = array(
-                'rsp_prt_start_date' => $entered_data[$this->getProjectSetting($start_date_field)],
-                'rsp_prt_config_id' => $config_id, //i.e. 'baseline_daililes' or 'followup_dailies'
-                'rsp_prt_portal_phone' => $entered_data[$this->getProjectSetting('phone-field')],
-                'rsp_prt_portal_email' => $entered_data[$this->getProjectSetting('email-field')],
-                'rsp_prt_portal_hash' => $new_hash,
-                'rsp_prt_portal_url' => $new_hash_url
-            );
-            $this->saveRSPParticipantInfo('baseline_dailies', $record, $config_event, $data_array);
+        //trigger the hash creation and sending of the email by triggering the redcap_save_record hook on  the rsp_participant_info form
+        // \Hooks::call('redcap_save_record', array($child_pid, $child_id, $_GET['page'], $child_event_name, $group_id, null, null, $_GET['instance']));
+        \Hooks::call('redcap_save_record', array($this->getProjectId(), $record, $target_instrument, $config_event, null, null, null,$repeat_instance));
 //        } else {
 //            $this->emDebug("Field not set yet");
 //        }
 
     }
 
-    function saveRSPParticipantInfo($config_type,$record_id, $event_id, $data_array) {
-        $instrument = 'rsp_participant_info';
+    function saveRSPParticipantInfo($config_type,$record_id, $event_id, $data_array, $instrument) {
+        //$instrument = 'rsp_participant_info';
 
         $next_instance_id = $this->getNextRepeatingInstanceID($record_id, $instrument, $event_id);
-        $this->emDebug("NEXCT ID IS ".$next_instance_id);
+        $this->emDebug("NEXT Repeating Instance ID for  $record_id  IS ".$next_instance_id);
         $params = array(
             REDCap::getRecordIdField()                => $record_id,
             //'events'                                  => $event_id,
