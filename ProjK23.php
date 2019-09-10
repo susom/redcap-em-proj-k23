@@ -1,8 +1,11 @@
 <?php
 namespace Stanford\ProjK23;
 
+use ExternalModules\ExternalModules;
 use \REDCap;
 use \Project;
+use DateTime;
+use DateInterval;
 
 require_once 'emLoggerTrait.php';
 
@@ -17,10 +20,30 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
 
     function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id, $survey_hash, $response_id, $repeat_instance = 1 ) {
 
+
+
         $target_form         = $this->getProjectSetting('triggering-instrument');
         $config_event         = $this->getProjectSetting('main-config-event-name');
         $config_field         = $this->getProjectSetting('config-field');
         $target_instrument    = $this->getProjectSetting('target-instrument');
+
+        //for baseline dailies count
+        $baseline_final_form         = $this->getProjectSetting('baseline-dailies-form-name');
+        $baseline_event              = $this->getProjectSetting('baseline-dailies-event-name');
+        $baseline_count_field        = $this->getProjectSetting('baseline-dailies-count-field');
+        $baseline_gc_date_field      = $this->getProjectSetting('baseline-dailies-gc-date-field');
+
+        //for followup dailies count
+        $followup_final_form         = $this->getProjectSetting('followup-dailies-form-name');
+        $followup_event              = $this->getProjectSetting('followup-dailies-event-name');
+        $followup_count_field        = $this->getProjectSetting('followup-dailies-count-field');
+        $followup_gc_date_field      = $this->getProjectSetting('followup-dailies-gc-date-field');
+        $followup_invite_date_field      = $this->getProjectSetting('followup-dailies-invite-date-field');
+        $followup_invite_sent_field      = $this->getProjectSetting('followup-dailies-invite-sent-field');
+
+
+        $this->emDebug("SAve Record / record=$record / instrument=$instrument / EVENTID = $event_id");
+        $this->emDebug("Target Record / instrument=$baseline_final_form / EVENTID = $baseline_event");
 
         if ($instrument == $target_form) {
             $auto_create_field    = $this->getProjectSetting('auto-create-field');
@@ -49,6 +72,10 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
             $fup_set = array_search('followup_dailies', array_column($results, 'rsp_prt_config_id'));
             $this->emDebug("RECID: " . $record . " KEY: " . $fup_set . " KEY IS NULL: " . empty($fup_set) . " : " . isset($fup_set));
 
+            //get the currrent data
+            $entered_data = $this->getEnteredData($record, $event_id);
+            //$this->emDebug($entered_data);
+
 
             //handle BASELINE
             $bl_date_field      = $this->getProjectSetting('baseline-date-field');
@@ -59,14 +86,20 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
 
                     //creating a new instance
                     $bl_repeat_instance = $this->getNextRepeatingInstanceID($record, $target_instrument,$config_event);
-                    $this->emDebug("NEXT Repeating Instance ID for  $record_id  IS ".$bl_repeat_instance);
-                    $this->updateRSPParticipantInfoForm('baseline_dailies', $record, $event_id, $bl_date_field,$bl_repeat_instance);
+                    $this->emDebug("NEXT Repeating Instance ID for  ".$record ." IS ".$bl_repeat_instance);
+                    $this->updateRSPParticipantInfoForm('baseline_dailies', $record, $event_id, $bl_date_field,$bl_repeat_instance,$entered_data);
+
+
                 }
             } else {
                 //assuming that 1 is baseline, 2 is followup
                 $bl_repeat_instance = 1;
-                $this->updateRSPParticipantInfoForm('baseline_dailies', $record, $event_id, $bl_date_field,$bl_repeat_instance);
+                $this->updateRSPParticipantInfoForm('baseline_dailies', $record, $event_id, $bl_date_field,$bl_repeat_instance,$entered_data);
             }
+
+
+            //calculate the Survey end date for baseline
+            $this->updateSurveyEndDate($record,$entered_data[$bl_date_field], 14,  $baseline_gc_date_field, $config_event);
 
             //only checking that the config id is set. should i also be checking that a hash was successfully created?
 
@@ -77,19 +110,205 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
             if (empty($fup_set)) {
                 if ($results[0][$auto_create_field.'___1'] == 1) {
                     $fup_repeat_instance = $this->getNextRepeatingInstanceID($record, $target_instrument,$config_event);
-                    $this->emDebug("NEXT Repeating Instance ID for  $record_id  IS ".$fup_repeat_instance);
-                    $this->updateRSPParticipantInfoForm('followup_dailies', $record, $event_id, $fup_date_field,$fup_repeat_instance);
+                    $this->emDebug("NEXT Repeating Instance ID for  $record  IS ".$fup_repeat_instance);
+                    $this->updateRSPParticipantInfoForm('followup_dailies', $record, $event_id, $fup_date_field,$fup_repeat_instance,$entered_data);
+
+
+                    //update the end date for gift card check
+
                 }
 
             } else {
                 //assuming that 1 is baseline, 2 is followup
                 $fup_repeat_instance = 2;
-                $this->updateRSPParticipantInfoForm('followup_dailies', $record, $event_id, $fup_date_field,$fup_repeat_instance);
+                $this->updateRSPParticipantInfoForm('followup_dailies', $record, $event_id, $fup_date_field,$fup_repeat_instance,$entered_data);
             }
 
+            //calculate the Survey end date for followup
+            $this->updateSurveyEndDate($record, $entered_data[$fup_date_field], 44, $followup_gc_date_field, $config_event);
+
+            //calculate the portal invite date for followup
+            $this->updateSurveyEndDate($record, $entered_data[$fup_date_field], 21, $followup_invite_date_field, $config_event);
+
+        }
+
+        //  2. Calculate counts for baseline dailies
+
+        if (($event_id == $baseline_event ) && ($instrument == $baseline_final_form)) {
+            $this->emDebug("Checking the baseline");
+            $this->checkSurveyCounts($record, $baseline_event, $baseline_final_form,$baseline_count_field, $config_event);
 
 
         }
+
+
+        // 3. Calculate counts for followup dailies
+        if (($event_id == $followup_event ) && ($instrument == $followup_final_form)) {
+            $this->checkSurveyCounts($record, $followup_event, $followup_final_form,$followup_count_field, $config_event);
+        }
+
+
+    }
+
+
+    function checkSurveyCounts($record, $event, $final_form, $target_count_field, $target_event) {
+        $baseline_event_name = REDCap::getEventNames(true, false, $event);
+
+        $filter = "[" . $baseline_event_name . "][" . $final_form.'_complete' . "] = '2'";
+
+        $params = array(
+            'return_format'    => 'json',
+            'records'          => $record,
+            'events'           => $event,
+            'fields'           => array(REDCap::getRecordIdField(),$final_form.'_complete' ),
+            'filterLogic'      => $filter
+        );
+
+        $q = REDCap::getData($params);
+
+
+        $records = json_decode($q, true);
+        $this->emDebug( $params,$records, count($records));
+
+        //save the counts
+        $data = array(
+            REDCap::getRecordIdField() => $record,
+            'redcap_event_name'        => REDCap::getEventNames(true, false,$target_event),
+            $target_count_field        => count($records)
+        );
+
+        REDCap::saveData($data);
+        $response = REDCap::saveData('json', json_encode(array($data)));
+
+        if ($response['errors']) {
+            $msg = "Error while trying to update field: $target_count_field";
+            $this->emError($response['errors'], $data, $msg);
+        } else {
+            $this->emDebug("Successfully saved data to $target_count_field.");
+        }
+
+    }
+
+    public function startInviteCron() {
+        $this->emDebug("Starting Invite Cron");
+
+        $enabled  = ExternalModules::getEnabledProjects($this->PREFIX);
+
+        //get the noAuth api endpoint for Cron job.
+        $url = $this->getUrl('startInviteCron.php', true, true);
+
+        while ($proj = db_fetch_assoc($enabled)) {
+            $pid = $proj['project_id'];
+
+            $this_url = $url . '&pid=' . $pid;
+            $resp     = http_get($this_url);
+
+        }
+
+    }
+
+
+    public function sendPortalInvite() {
+        $start_time = '10';
+        $config_event         = $this->getProjectSetting('main-config-event-name');
+        $followup_invite_date_field      = $this->getProjectSetting('followup-dailies-invite-date-field');
+        $followup_invite_sent_field      = $this->getProjectSetting('followup-dailies-invite-sent-field');
+        $email_field                     = $this->getProjectSetting('email-field');
+        $invite_subject                  = $this->getProjectSetting('portal-invite-subject');
+        $invite_from                     = $this->getProjectSetting('portal-invite-from');
+        $invite_msg                      = $this->getProjectSetting('portal-invite-email');
+        $invite_url_label                = $this->getProjectSetting('portal-url-label');
+
+
+
+
+        $this->emDebug("Starting Cron : Check if its in the right time range");
+
+        //go through all the records where everything is not disabled
+           //portal , email_disabled, email not blank
+          //check that the email hasn't already been sent
+          //check that it's been 3 weeks after the class_date
+          //
+
+        $candidates = $this->getFUPPortalInviteCandidates($config_event, $followup_invite_date_field, $followup_invite_sent_field, $email_field);
+
+        foreach ($candidates as $candidate) {
+            //send email
+            $this->emDebug("Sending email to ". $candidate[$email_field]);
+
+            $record_id = $candidate[REDCap::getRecordIdField()];
+
+            $this->sendEmail($record_id,
+                $candidate[$email_field],
+                $invite_from,
+                $invite_subject,
+                $invite_msg,
+                $config_event,
+                null
+                );
+
+        }
+
+    }
+
+    /**
+     * Do a REDCap filter search on the project where
+     *    1. config-id field matches the config-id in the subsetting for this config
+     *    2. emails has not been disabled for this participant and the email field is not empty
+     *    3. phone has not been disabled for this participant and the phone field is not empty
+     *
+     * @return bool|mixed
+     */
+    public function getFUPPortalInviteCandidates($event, $target_date_field, $portal_sent_field, $email_field) {
+        global $module;
+
+        $today = new DateTime();
+        $today_str = $today->format('Y-m-d');
+        $event_name = REDCap::getEventNames(true, false, $event);
+
+        //1. get all the records where the send date is today and not already sent
+        $filter = "[" . $event_name . "][" . $portal_sent_field . "] ='' AND [" . $event_name . "][" . $target_date_field . "] <>''";
+
+
+        $module->emDebug($filter);
+        $params = array(
+            'return_format' => 'json',
+            'fields' => array(
+                REDCap::getRecordIdField(),
+                $target_date_field,
+                $portal_sent_field,
+                $email_field),
+            'events' => $event,
+            'filterLogic'  => $filter
+        );
+
+
+        $q = REDCap::getData($params);
+        $result = json_decode($q, true);
+
+
+
+        //there is a bug since 9.1 where the filter returns an empty array for every found array.
+        //iterate over the returned result and delete the ones where redcap_repeat_instance is blank
+        $candidate = array();
+        foreach ($result as $k => $v) {
+            if (!empty($v['redcap_repeat_instance'])) {
+                continue;
+            }
+
+            $this->emDebug($v, "looking for target date:$today_str ".$v[$target_date_field]);
+            if ($v[$target_date_field] == $today_str) {
+
+                $this->emDebug("FOUND FOUND target date: ".$v);
+                $candidate[] = $v;
+            }
+        }
+
+        //$module->emDebug($result, $not_empty, "Count of invitations to be sent:  ".count($result). " not empty". count($not_empty));
+        //exit;
+        $module->emDebug($params, $result, $candidate);
+        //return $result;
+        return $candidate;
 
     }
 
@@ -141,7 +360,7 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
 
     }
 
-    function updateRSPParticipantInfoForm($config_id, $record, $event_id, $start_date_field, $repeat_instance)
+    function updateRSPParticipantInfoForm($config_id, $record, $event_id, $start_date_field, $repeat_instance,$entered_data)
     {
         $config_event = $this->getProjectSetting('main-config-event-name');
         $target_instrument = $this->getProjectSetting('target-instrument');
@@ -151,8 +370,6 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
             return false;
         }
 
-        $entered_data = $this->getEnteredData($record, $event_id);
-        //$this->emDebug($entered_data);
 
         $data_array = array(
             'rsp_prt_start_date' => $entered_data[$start_date_field],
@@ -190,6 +407,39 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
         \Hooks::call('redcap_save_record', array($this->getProjectId(), $record, $target_instrument, $config_event, null, null, null, $repeat_instance));
     }
 
+    function updateSurveyEndDate($record, $start_date, $offset, $target_field, $target_event) {
+
+
+        if (!empty($start_date)) {
+            //do some date addition to get the end date
+            $end_date = new DateTime($start_date);
+            $end_date->add(new DateInterval('P'.$offset.'D'));
+
+
+
+            //save the date
+            $data = array(
+                REDCap::getRecordIdField() => $record,
+                'redcap_event_name'        => REDCap::getEventNames(true, false,$target_event),
+                $target_field              => $end_date->format('Y-m-d')
+
+            );
+
+            $this->emDebug('Started with $start_date.sveing to $target_field: '.$end_date->format('Y-m-d'), $data);
+        REDCap::saveData($data);
+        $response = REDCap::saveData('json', json_encode(array($data)));
+
+        if ($response['errors']) {
+            $msg = "Error while trying to add angio form.";
+            $this->emError($response['errors'], $data, $msg);
+        } else {
+            $this->emDebug("Successfully saved data to $target_field.");
+        }
+
+
+
+        }
+    }
 
     function saveRSPParticipantInfo($record_id, $event_id, $data_array, $instrument,$repeat_instance) {
         //$instrument = 'rsp_participant_info';
@@ -294,6 +544,36 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
         //$new_hash_url = $portal_url. "&h=" . $new_hash . "&sp=" . $project_id;
 
         return $new_hash;
+    }
+
+    function sendEmail($record, $to, $from, $subject, $msg, $event_id, $repeat_instance) {
+        global $module;
+
+        $module->emDebug("RECORD:".$record. " / EVENTID: ".$event_id. " /REP INSTANCE: ".$repeat_instance);
+
+        $piped_email_subject = \Piping::replaceVariablesInLabel($subject, $record, $event_id, $repeat_instance,array(), false, null, false);
+        $piped_email_msg = \Piping::replaceVariablesInLabel($msg, $record, $event_id, $repeat_instance,array(), false, null, false);
+        //$module->emDebug($record. "piped subject: ". $piped_email_subject);
+        //$module->emDebug($record. "piped msg: ". $piped_email_msg);
+
+
+        // Prepare message
+        $email = new \Message();
+        $email->setTo($to);
+        $email->setFrom($from);
+        $email->setSubject($piped_email_subject);
+        $email->setBody($piped_email_msg); //format message??
+
+        $result = $email->send();
+        //$module->emDebug($to, $from, $subject, $msg, $result);
+
+        // Send Email
+        if ($result == false) {
+            $module->emLog('Error sending mail: ' . $email->getSendError() . ' with ' . json_encode($email));
+            return false;
+        }
+
+        return true;
     }
 
 }

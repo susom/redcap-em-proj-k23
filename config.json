@@ -26,12 +26,24 @@
     "redcap_save_record"
   ],
 
+  "crons": [
+  ],
+
   "links": {
     "control-center": [
     ],
     "project": [
+      {
+        "name": "Proj K23: Test Cron Links",
+        "icon": "gear",
+        "url": "DisplayCronLinks.php"
+      }
     ]
   },
+
+  "no-auth-pages": [
+    "startInviteCron"
+  ],
 
   "system-settings": [
     {
@@ -144,6 +156,96 @@
       "name": "<b>Auto-create RSP Participant instances Field</b><br>This checkbox field to trigger auto creation of RSP Participant Instances",
       "required": false,
       "type": "field-list"
+    },
+    {
+      "key": "baseline-dailies-form-name",
+      "name": "<b>Baseline Dailies Form Name</b><br>Name of final form in Baseline Surveys",
+      "required": false,
+      "type": "form-list"
+    },
+    {
+      "key": "baseline-dailies-event-name",
+      "name": "<b>Baseline Dailies Event Name</b><br>Name of event for  Baseline Surveys",
+      "required": false,
+      "type": "event-list"
+    },
+    {
+      "key": "baseline-dailies-count-field",
+      "name": "<b>Baseline Dailies Count Field</b><br>Name of field to capture the count of Baseline Surveys",
+      "required": false,
+      "type": "field-list"
+    },
+    {
+      "key": "baseline-dailies-gc-date-field",
+      "name": "<b>Baseline Dailies GC Date Field</b><br>Name of field to capture the end date of Baseline Surveys",
+      "required": false,
+      "type": "field-list"
+    },
+    {
+      "key": "followup-dailies-form-name",
+      "name": "<b>Followup Dailies Form Name</b><br>Name of final form in Followup Surveys",
+      "required": false,
+      "type": "form-list"
+    },
+    {
+      "key": "followup-dailies-event-name",
+      "name": "<b>Followup Dailies Event Name</b><br>Name of event for  Followup Surveys",
+      "required": false,
+      "type": "event-list"
+    },
+    {
+      "key": "followup-dailies-count-field",
+      "name": "<b>Followup Dailies Count Field</b><br>Name of field to capture the count of Followup Surveys",
+      "required": false,
+      "type": "field-list"
+    },
+    {
+      "key": "followup-dailies-gc-date-field",
+      "name": "<b>Followup Dailies GC Date Field</b><br>Name of field to capture the end date of Followup Surveys",
+      "required": false,
+      "type": "field-list"
+    },
+    {
+      "key": "followup-dailies-invite-date-field",
+      "name": "<b>Followup Dailies Invite Date Field</b><br>Name of field to capture the invite date to the  Followup Surveys portal",
+      "required": false,
+      "type": "field-list"
+    },
+    {
+      "key": "followup-dailies-invite-sent-field",
+      "name": "<b>Followup Dailies Invite Sent Field</b><br>Name of field to capture timestamp  Followup Surveys portal invite send",
+      "required": false,
+      "type": "field-list"
+    },
+    {
+      "key": "send-portal-invite",
+      "name": "<div class='alert alert-warning'><b>Send Portal Invite</b><br>Send email invitation with portal url.</div>",
+      "required": false,
+      "type": "checkbox"
+    },
+    {
+      "key": "portal-invite-subject",
+      "name": "<div class='alert alert-warning'><b>Portal Notification Email Subject</b><br>When a participant is added to the project, they will receive an email to notify them of their personal portal url.</div><br><br>You can edit the suggested default.",
+      "required": false,
+      "type": "text"
+    },
+    {
+      "key": "portal-invite-from",
+      "name": "<div class='alert alert-warning'><b>Portal Notification From Email</b><br>When a participant is added to the project, they will receive an email to notify them of their personal portal url.</div><br><br>You can edit the suggested default.",
+      "required": false,
+      "type": "text"
+    },
+    {
+      "key": "portal-invite-email",
+      "name": "<div class='alert alert-warning'><b>Portal Notification Email Body</b><br>When a participant is added to the project, they will receive an email to notify them of their personal portal url.</div><br>You can use piping to customize this message and use the special tag [portal-url] for the link.<br><br>You can edit the suggested default.",
+      "required": false,
+      "type": "textarea"
+    },
+    {
+      "key": "portal-url-label",
+      "name": "<div class='alert alert-warning'><b>Label for Portal URL link</b><br>Display a clickable hyperlink rather than the full url.</div><br>For example, enter 'Personal Portal' to have the survey displayed as a hyperlink on 'Personal Portal'<br><br>If left blank, the full url of the personal portal will be displayed in the email (i.e. https://redpca.stanford.edu/... ",
+      "required": false,
+      "type": "text"
     }
   ]
 }
