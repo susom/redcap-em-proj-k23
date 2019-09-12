@@ -27,6 +27,13 @@
   ],
 
   "crons": [
+    {
+      "cron_name": "k23_class_invite",
+      "cron_description": "Cron that runs everyday to send the portal invite for the followup surveys",
+      "method": "startInviteCron",
+      "cron_frequency": "3600",
+      "cron_max_run_time": "300"
+    }
   ],
 
   "links": {
@@ -106,6 +113,12 @@
     {
       "key": "class-date-field",
       "name": "<b>Class Date Field</b><br>This TEXT field is the date that corresponds to the Class Date",
+      "required": false,
+      "type": "field-list"
+    },
+    {
+      "key": "portal-url-field",
+      "name": "<b>Portal URL Field</b><br>TEXT field for the Portal URL in the RSP Participant Info form",
       "required": false,
       "type": "field-list"
     },
@@ -218,10 +231,16 @@
       "type": "field-list"
     },
     {
-      "key": "send-portal-invite",
+      "key": "portal-invite-send",
       "name": "<div class='alert alert-warning'><b>Send Portal Invite</b><br>Send email invitation with portal url.</div>",
       "required": false,
       "type": "checkbox"
+    },
+    {
+      "key": "portal-invite-time",
+      "name": "<div class='alert alert-info'><b>Invitation Time</b><br>Hour of the day (0-24) to send invitation (e.g. 18 for 6PM)</div>",
+      "required": false,
+      "type": "number"
     },
     {
       "key": "portal-invite-subject",

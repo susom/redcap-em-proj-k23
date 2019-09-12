@@ -192,16 +192,37 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
     public function startInviteCron() {
         $this->emDebug("Starting Invite Cron");
 
-        $enabled  = ExternalModules::getEnabledProjects($this->PREFIX);
+        $enabled = ExternalModules::getEnabledProjects($this->PREFIX);
 
         //get the noAuth api endpoint for Cron job.
         $url = $this->getUrl('startInviteCron.php', true, true);
 
+        $current_hour = date('H');
+
         while ($proj = db_fetch_assoc($enabled)) {
             $pid = $proj['project_id'];
+            $this->emDebug("STARTING PID: ".$pid);
 
-            $this_url = $url . '&pid=' . $pid;
-            $resp     = http_get($this_url);
+            //For each project, see if the invite has been enabled
+            $enabled_invite = $this->getProjectSetting('portal-invite-send', $pid);
+
+
+            if ($enabled_invite == true) {
+
+                //check if it is the right time to send
+                $invite_time = $this->getProjectSetting('portal-invite-time', $pid);
+
+                //$this->emDebug("checking $invite_time");
+
+                //if  the right hour, start the check
+                if ($invite_time == $current_hour) {
+
+                    $this->emDebug("Starting $invite_time");
+                    $this_url = $url . '&pid=' . $pid;
+                    $resp = http_get($this_url);
+                }
+
+            }
 
         }
 
@@ -209,43 +230,57 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
 
 
     public function sendPortalInvite() {
-        $start_time = '10';
-        $config_event         = $this->getProjectSetting('main-config-event-name');
-        $followup_invite_date_field      = $this->getProjectSetting('followup-dailies-invite-date-field');
-        $followup_invite_sent_field      = $this->getProjectSetting('followup-dailies-invite-sent-field');
         $email_field                     = $this->getProjectSetting('email-field');
-        $invite_subject                  = $this->getProjectSetting('portal-invite-subject');
-        $invite_from                     = $this->getProjectSetting('portal-invite-from');
-        $invite_msg                      = $this->getProjectSetting('portal-invite-email');
-        $invite_url_label                = $this->getProjectSetting('portal-url-label');
-
-
-
-
-        $this->emDebug("Starting Cron : Check if its in the right time range");
+        $fup_url_field  = $this->getProjectSetting('portal-url-field');
+        $event      = $this->getProjectSetting('main-config-event-name');
+        $event_name = REDCap::getEventNames(true, false, $event);
 
         //go through all the records where everything is not disabled
            //portal , email_disabled, email not blank
           //check that the email hasn't already been sent
           //check that it's been 3 weeks after the class_date
-          //
-
-        $candidates = $this->getFUPPortalInviteCandidates($config_event, $followup_invite_date_field, $followup_invite_sent_field, $email_field);
+        $candidates = $this->getFUPPortalInviteCandidates();
+        $today = new DateTime();
 
         foreach ($candidates as $candidate) {
             //send email
-            $this->emDebug("Sending email to ". $candidate[$email_field]);
+            $this->emDebug("Sending portal invite email to ". $candidate[$email_field]);
 
-            $record_id = $candidate[REDCap::getRecordIdField()];
+            //get the portal url
+            $params = array(
+                'return_format' => 'json',
+                'records'       => $candidate[REDCap::getRecordIdField()],
+                'fields'        => array(
+                    REDCap::getRecordIdField(),
+                    $fup_url_field,
+                    'rsp_prt_config_id'
+                ),
+                'events'        => $event,
+                'filterLogic'   => "([{$event_name}][rsp_prt_config_id]='followup_dailies')"
+            );
 
-            $this->sendEmail($record_id,
-                $candidate[$email_field],
-                $invite_from,
-                $invite_subject,
-                $invite_msg,
-                $config_event,
-                null
+            $q = REDCap::getData($params);
+            $fup_result = json_decode($q, true);
+
+            //$this->emDebug($fup_result, $params); //exit;
+
+            $send_result = $this->sendEmail($candidate[REDCap::getRecordIdField()], $candidate[$email_field], $fup_result[0][$fup_url_field]);
+
+            if ($send_result == true) {
+                $ts_field = $this->getProjectSetting('followup-dailies-invite-sent-field');
+
+                //save timestamp
+                $data = array(
+                    REDCap::getRecordIdField() => $candidate[REDCap::getRecordIdField()],
+                    'redcap_event_name'        => $event_name,
+                    $ts_field              => $today->format('Y-m-d H:i:s')
+
                 );
+
+                $this->emDebug('Saved to  $ts_field: '.$today->format('Y-m-d H:i:s'), $data);
+                REDCap::saveData($data);
+                $response = REDCap::saveData('json', json_encode(array($data)));
+            }
 
         }
 
@@ -259,55 +294,68 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
      *
      * @return bool|mixed
      */
-    public function getFUPPortalInviteCandidates($event, $target_date_field, $portal_sent_field, $email_field) {
-        global $module;
+    public function getFUPPortalInviteCandidates( ) {
+        //get config settings
+
+        $invite_sent_field      = $this->getProjectSetting('followup-dailies-invite-sent-field');
+        $target_date_field = $this->getProjectSetting('followup-dailies-invite-date-field');
+        $email_field  = $this->getProjectSetting('email-field');
+        $email_disabled_field  = $this->getProjectSetting('disable-email-field');
+        $fup_disabled_field  = $this->getProjectSetting('stop-fup-field');
+        $fup_url_field  = $this->getProjectSetting('portal-url-field');
+
+        $event = $this->getProjectSetting('main-config-event-name');
+        $event_name = REDCap::getEventNames(true, false, $event);
 
         $today = new DateTime();
         $today_str = $today->format('Y-m-d');
-        $event_name = REDCap::getEventNames(true, false, $event);
-
-        //1. get all the records where the send date is today and not already sent
-        $filter = "[" . $event_name . "][" . $portal_sent_field . "] ='' AND [" . $event_name . "][" . $target_date_field . "] <>''";
 
 
-        $module->emDebug($filter);
+        //1. get all the records where the send date is today
+        //2. not already sent
+        //3. email not disabled
+        //3. portal not disabled
+        //4. email not blank
+
+        $filter = "(".
+            "(datediff( 'today',[{$event_name}][{$target_date_field}], 'd', true) =0) AND ".   //send date is today
+            "([{$event_name}][{$invite_sent_field}]='') AND ".       //not already sent
+            "([{$event_name}][{$email_field}]<>'') AND ".                 //email not blank
+            "([{$event_name}][{$email_disabled_field}(1)]<>'1') AND ".         //email not disabled
+            "([{$event_name}][{$fup_disabled_field}(1)]<>'1')".         //fup not disabled
+            ")";
+
+        $this->emDebug($filter);
         $params = array(
             'return_format' => 'json',
             'fields' => array(
                 REDCap::getRecordIdField(),
                 $target_date_field,
-                $portal_sent_field,
+                $invite_sent_field,
+                $email_disabled_field,
+                $fup_disabled_field,
+                $fup_url_field,
                 $email_field),
             'events' => $event,
             'filterLogic'  => $filter
         );
-
 
         $q = REDCap::getData($params);
         $result = json_decode($q, true);
 
 
 
-        //there is a bug since 9.1 where the filter returns an empty array for every found array.
-        //iterate over the returned result and delete the ones where redcap_repeat_instance is blank
+        // the filter returns an empty array for every found array.
+        //iterate over the returned result and delete the ones where redcap_repeat_instance is NOT blank since this is not repeating
         $candidate = array();
         foreach ($result as $k => $v) {
             if (!empty($v['redcap_repeat_instance'])) {
                 continue;
             }
-
-            $this->emDebug($v, "looking for target date:$today_str ".$v[$target_date_field]);
-            if ($v[$target_date_field] == $today_str) {
-
-                $this->emDebug("FOUND FOUND target date: ".$v);
-                $candidate[] = $v;
-            }
+            $candidate[] = $v;
         }
 
-        //$module->emDebug($result, $not_empty, "Count of invitations to be sent:  ".count($result). " not empty". count($not_empty));
-        //exit;
-        $module->emDebug($params, $result, $candidate);
-        //return $result;
+        //$this->emDebug($params, $result, $candidate); //exit;
         return $candidate;
 
     }
@@ -546,15 +594,36 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
         return $new_hash;
     }
 
-    function sendEmail($record, $to, $from, $subject, $msg, $event_id, $repeat_instance) {
-        global $module;
+    function sendEmail($record, $to, $portal_url) {
+        $event_id          = $this->getProjectSetting('main-config-event-name');
+        $subject           = $this->getProjectSetting('portal-invite-subject');
+        $from              = $this->getProjectSetting('portal-invite-from');
+        $msg               = $this->getProjectSetting('portal-invite-email');
+        $portal_url_label  = $this->getProjectSetting('portal-url-label');
+        $repeat_instance   = NULL;
+        $target_str        = "[portal-url]";
 
-        $module->emDebug("RECORD:".$record. " / EVENTID: ".$event_id. " /REP INSTANCE: ".$repeat_instance);
+        $this->emDebug("RECORD:".$record. " / EVENTID: ".$event_id. " /REP INSTANCE: ".$repeat_instance);
+
+        if (empty($portal_url_label)) {
+            $portal_url_label = $portal_url;
+        }
+
+        $tagged_link = "<a href='{$portal_url}'>$portal_url_label</a>";
+
+        if (strpos($msg, $target_str) !== false) {
+            $msg = str_replace($target_str, $tagged_link, $msg);
+        } else {
+            $msg = $msg . "<br>Use this link to take the survey: ".$tagged_link;
+        }
+
+        //$this->emDebug( $email_to, $from, $subject, $msg);
+        if (!isset($from)) $from = 'no-reply@stanford.edu';
 
         $piped_email_subject = \Piping::replaceVariablesInLabel($subject, $record, $event_id, $repeat_instance,array(), false, null, false);
         $piped_email_msg = \Piping::replaceVariablesInLabel($msg, $record, $event_id, $repeat_instance,array(), false, null, false);
         //$module->emDebug($record. "piped subject: ". $piped_email_subject);
-        //$module->emDebug($record. "piped msg: ". $piped_email_msg);
+        //$this->emDebug($record. "piped msg: ". $piped_email_msg);
 
 
         // Prepare message
@@ -569,7 +638,7 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
 
         // Send Email
         if ($result == false) {
-            $module->emLog('Error sending mail: ' . $email->getSendError() . ' with ' . json_encode($email));
+            $this->emLog('Error sending mail: ' . $email->getSendError() . ' with ' . json_encode($email));
             return false;
         }
 
