@@ -69,6 +69,12 @@
       "type": "checkbox"
     },
     {
+      "key": "portal-autocreate-desc",
+      "name": "<div class='alert alert-warning'><h3 class='text-center'>AUTO POPULATE RSP Participant Info Form </h3><br>Upon save of the triggering instrument, the RSP Participant Info form is automatically populated and saved.</div>",
+      "required": false,
+      "type": "descriptive"
+    },
+    {
       "key": "triggering-instrument",
       "name": "<div class='alert alert-success'><b>Participant Setup Instrument</b><br>The survey instrument that triggers the survey portal.  This form contains the randomization group, emails, phones and start dates",
       "required": false,
@@ -219,6 +225,13 @@
       "type": "field-list"
     },
     {
+      "key": "portal-invite-desc",
+      "name": "<div class='alert alert-success'><h3 class='text-center'>DELAYED PORTAL INVITE SETTINGS</h3><br>The invite to  a second portal can be delayed to a date set in the form.  The portal invite will be sent on the date entered in the Followup Dailies Invite Date Field</div>",
+      "required": false,
+      "type": "descriptive"
+    },
+
+    {
       "key": "followup-dailies-invite-date-field",
       "name": "<b>Followup Dailies Invite Date Field</b><br>Name of field to capture the invite date to the  Followup Surveys portal",
       "required": false,
@@ -232,25 +245,25 @@
     },
     {
       "key": "portal-invite-send",
-      "name": "<div class='alert alert-warning'><b>Send Portal Invite</b><br>Send email invitation with portal url.</div>",
+      "name": "<b>Send Portal Invite</b><br>Send email invitation with portal url.",
       "required": false,
       "type": "checkbox"
     },
     {
       "key": "portal-invite-time",
-      "name": "<div class='alert alert-info'><b>Invitation Time</b><br>Hour of the day (0-24) to send invitation (e.g. 18 for 6PM)</div>",
+      "name": "<br>Hour of the day (0-24) to send invitation (e.g. 18 for 6PM)",
       "required": false,
       "type": "number"
     },
     {
       "key": "portal-invite-subject",
-      "name": "<div class='alert alert-warning'><b>Portal Notification Email Subject</b><br>When a participant is added to the project, they will receive an email to notify them of their personal portal url.</div><br><br>You can edit the suggested default.",
+      "name": "<b>Portal Notification Email Subject</b><br>When a participant is added to the project, they will receive an email to notify them of their personal portal url.<br><br>You can edit the suggested default.",
       "required": false,
       "type": "text"
     },
     {
       "key": "portal-invite-from",
-      "name": "<div class='alert alert-warning'><b>Portal Notification From Email</b><br>When a participant is added to the project, they will receive an email to notify them of their personal portal url.</div><br><br>You can edit the suggested default.",
+      "name": "<b>Portal Notification From Email</b><br>When a participant is added to the project, they will receive an email to notify them of their personal portal url.<br><br>You can edit the suggested default.",
       "required": false,
       "type": "text"
     },

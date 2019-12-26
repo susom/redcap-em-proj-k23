@@ -20,7 +20,12 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
 
     function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id, $survey_hash, $response_id, $repeat_instance = 1 ) {
 
-
+        /**
+         *  To triggered updates:
+         *      1. On initial save, auto-create the RSP Participant Info forms for the baseline survey and followup surveys
+         *      2. If REDO baseline is selected, createa third Participant Info for the redo of the baseline surveys
+         *
+         */
 
         $target_form         = $this->getProjectSetting('triggering-instrument');
         $config_event         = $this->getProjectSetting('main-config-event-name');
@@ -39,7 +44,6 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
         $followup_count_field        = $this->getProjectSetting('followup-dailies-count-field');
         $followup_gc_date_field      = $this->getProjectSetting('followup-dailies-gc-date-field');
         $followup_invite_date_field      = $this->getProjectSetting('followup-dailies-invite-date-field');
-        $followup_invite_sent_field      = $this->getProjectSetting('followup-dailies-invite-sent-field');
 
 
         $this->emDebug("SAve Record / record=$record / instrument=$instrument / EVENTID = $event_id");
@@ -189,6 +193,13 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
 
     }
 
+    /**
+     * There is a request to postpone sending of portal invite for secondary followup surveys to a later date.
+     * There is now a followup-dailies-invite-date-field which records the date of the delayed portal invite
+     *
+     * This is the cron method initiating the delayed portal invite check
+     *
+     */
     public function startInviteCron() {
         $this->emDebug("Starting Invite Cron");
 
@@ -228,7 +239,14 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
 
     }
 
-
+    /**
+     * There is a request to postpone sending of portal invite for secondary followup surveys to a later date.
+     * There is now a followup-dailies-invite-date-field which records the date of the delayed portal invite
+     *
+     * This is triggered from the cron method initiating the delayed portal invite check
+     *
+     * @throws \Exception
+     */
     public function sendPortalInvite() {
         $email_field                     = $this->getProjectSetting('email-field');
         $fup_url_field  = $this->getProjectSetting('portal-url-field');
@@ -287,6 +305,9 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
     }
 
     /**
+     * Request to postpone sending of portal invite for secondary followup surveys to a later date.
+     * There is now a followup-dailies-invite-date-field which records the date of the delayed portal invite
+     *
      * Do a REDCap filter search on the project where
      *    1. config-id field matches the config-id in the subsetting for this config
      *    2. emails has not been disabled for this participant and the email field is not empty
