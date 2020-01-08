@@ -69,20 +69,34 @@
       "type": "checkbox"
     },
     {
+      "key": "baseline-portal-config-name",
+      "name": "<b>Baseline Survey Portal EM Config Name</b><br>The Unique Config ID used for the baseline surveys in the Survey Portal EM (ex: baseline_dailies)",
+      "required": false,
+      "type": "text",
+      "default": "baseline_dailies"
+    },
+    {
+      "key": "followup-portal-config-name",
+      "name": "<b>Followup Survey Portal EM Config Name</b><br>The Unique Config ID used for the followup surveys in the Survey Portal EM (ex: followup_dailies)",
+      "required": false,
+      "type": "text",
+      "default": "followup_dailies"
+    },
+    {
       "key": "portal-autocreate-desc",
-      "name": "<div class='alert alert-warning'><h3 class='text-center'>AUTO POPULATE RSP Participant Info Form </h3><br>Upon save of the triggering instrument, the RSP Participant Info form is automatically populated and saved.</div>",
+      "name": "<div class='alert alert-warning'><h3>AUTO POPULATE RSP Participant Info Form </h3><br>Upon save of the triggering instrument, the RSP Participant Info form is automatically populated and saved.</div>",
       "required": false,
       "type": "descriptive"
     },
     {
       "key": "triggering-instrument",
-      "name": "<div class='alert alert-success'><b>Participant Setup Instrument</b><br>The survey instrument that triggers the survey portal.  This form contains the randomization group, emails, phones and start dates",
+      "name": "<b>Participant Setup Instrument</b><br>The survey instrument that triggers the survey portal.  This form contains the randomization group, emails, phones and start dates",
       "required": false,
       "type": "form-list"
     },
     {
       "key": "trigger-event-name",
-      "name": "<div class='alert alert-success'><b>Participant Setup Event Name</b><br>Name of event where 'Participant Setup' form is enabled.</div>",
+      "name": "<b>Participant Setup Event Name</b><br>Name of event where 'Participant Setup' form is enabled.",
       "required": false,
       "type": "event-list"
     },
@@ -130,7 +144,7 @@
     },
     {
       "key": "main-config-event-name",
-      "name": "<div class='alert alert-success'><b>Main Config Event Name</b><br>Name of event where 'RSP Participant Info' form is enabled.</div>",
+      "name": "<b>Main Config Event Name</b><br>Name of event where 'RSP Participant Info' form is enabled.",
       "required": false,
       "type": "event-list"
     },
@@ -177,6 +191,12 @@
       "type": "field-list"
     },
     {
+      "key": "baseline-admin-desc",
+      "name": "<div class='alert alert-warning'><h3>Baseline Admin Setup </h3><br>The following fields are to set up the giftcard admin count and last date fields for the baseline survey giftcard disbursement/div>",
+      "required": false,
+      "type": "descriptive"
+    },
+    {
       "key": "baseline-dailies-form-name",
       "name": "<b>Baseline Dailies Form Name</b><br>Name of final form in Baseline Surveys",
       "required": false,
@@ -187,6 +207,30 @@
       "name": "<b>Baseline Dailies Event Name</b><br>Name of event for  Baseline Surveys",
       "required": false,
       "type": "event-list"
+    },
+    {
+      "key": "followup-admin-desc",
+      "name": "<div class='alert alert-warning'><h3>Followup Admin Setup </h3><br>The following fields are to set up the giftcard admin count and last date fields for the followup survey giftcard disbursement</div>",
+      "required": false,
+      "type": "descriptive"
+    },
+    {
+      "key": "followup-dailies-form-name",
+      "name": "<b>Followup Dailies Form Name</b><br>Name of final form in Followup Surveys",
+      "required": false,
+      "type": "form-list"
+    },
+    {
+      "key": "followup-dailies-event-name",
+      "name": "<b>Followup Dailies Event Name</b><br>Name of event for  Followup Surveys",
+      "required": false,
+      "type": "event-list"
+    },
+    {
+      "key": "baseline-giftcard-desc",
+      "name": "<div class='alert alert-warning'><h3>Baseline Admin GiftCard Setup</h3><br>The following fields are to set up the giftcard admin count and last date fields for the baseline survey giftcard disbursement/div>",
+      "required": false,
+      "type": "descriptive"
     },
     {
       "key": "baseline-dailies-count-field",
@@ -200,17 +244,12 @@
       "required": false,
       "type": "field-list"
     },
+
     {
-      "key": "followup-dailies-form-name",
-      "name": "<b>Followup Dailies Form Name</b><br>Name of final form in Followup Surveys",
+      "key": "followup-giftcard-desc",
+      "name": "<div class='alert alert-warning'><h3>Followup Gift Card Admin Setup </h3><br>The following fields are to set up the giftcard admin count and last date fields for the followup survey giftcard disbursement</div>",
       "required": false,
-      "type": "form-list"
-    },
-    {
-      "key": "followup-dailies-event-name",
-      "name": "<b>Followup Dailies Event Name</b><br>Name of event for  Followup Surveys",
-      "required": false,
-      "type": "event-list"
+      "type": "descriptive"
     },
     {
       "key": "followup-dailies-count-field",
@@ -226,7 +265,7 @@
     },
     {
       "key": "portal-invite-desc",
-      "name": "<div class='alert alert-success'><h3 class='text-center'>DELAYED PORTAL INVITE SETTINGS</h3><br>The invite to  a second portal can be delayed to a date set in the form.  The portal invite will be sent on the date entered in the Followup Dailies Invite Date Field</div>",
+      "name": "<div class='alert alert-success'><h3>DELAYED PORTAL INVITE SETTINGS</h3><br>The invite to  a second portal can be delayed to a date set in the form.  The portal invite will be sent on the date entered in the Followup Dailies Invite Date Field</div>",
       "required": false,
       "type": "descriptive"
     },
@@ -269,13 +308,13 @@
     },
     {
       "key": "portal-invite-email",
-      "name": "<div class='alert alert-warning'><b>Portal Notification Email Body</b><br>When a participant is added to the project, they will receive an email to notify them of their personal portal url.</div><br>You can use piping to customize this message and use the special tag [portal-url] for the link.<br><br>You can edit the suggested default.",
+      "name": "<b>Portal Notification Email Body</b><br>When a participant is added to the project, they will receive an email to notify them of their personal portal url.<br>You can use piping to customize this message and use the special tag [portal-url] for the link.<br><br>You can edit the suggested default.",
       "required": false,
       "type": "textarea"
     },
     {
       "key": "portal-url-label",
-      "name": "<div class='alert alert-warning'><b>Label for Portal URL link</b><br>Display a clickable hyperlink rather than the full url.</div><br>For example, enter 'Personal Portal' to have the survey displayed as a hyperlink on 'Personal Portal'<br><br>If left blank, the full url of the personal portal will be displayed in the email (i.e. https://redpca.stanford.edu/... ",
+      "name": "<b>Label for Portal URL link</b><br>Display a clickable hyperlink rather than the full url.<br>For example, enter 'Personal Portal' to have the survey displayed as a hyperlink on 'Personal Portal'<br><br>If left blank, the full url of the personal portal will be displayed in the email (i.e. https://redpca.stanford.edu/... ",
       "required": false,
       "type": "text"
     }

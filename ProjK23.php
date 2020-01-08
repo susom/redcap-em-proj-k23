@@ -23,11 +23,13 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
         /**
          *  To triggered updates:
          *      1. On initial save, auto-create the RSP Participant Info forms for the baseline survey and followup surveys
-         *      2. If REDO baseline is selected, createa third Participant Info for the redo of the baseline surveys
+         *      2. If REDO baseline is selected, create a third Participant Info for the redo of the baseline surveys
          *
          */
+        $baseline_config     = $this->getProjectSetting('baseline-portal-config-name');
+        $followup_config     = $this->getProjectSetting('followup-portal-config-name');
 
-        $target_form         = $this->getProjectSetting('triggering-instrument');
+        $target_form          = $this->getProjectSetting('triggering-instrument');
         $config_event         = $this->getProjectSetting('main-config-event-name');
         $config_field         = $this->getProjectSetting('config-field');
         $target_instrument    = $this->getProjectSetting('target-instrument');
@@ -43,12 +45,23 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
         $followup_event              = $this->getProjectSetting('followup-dailies-event-name');
         $followup_count_field        = $this->getProjectSetting('followup-dailies-count-field');
         $followup_gc_date_field      = $this->getProjectSetting('followup-dailies-gc-date-field');
+
+        //separate portal invite for followup portal
         $followup_invite_date_field      = $this->getProjectSetting('followup-dailies-invite-date-field');
 
 
+        $this->emDebug("baseline config is $baseline_config and followup_config is $follwoup_config");
         $this->emDebug("SAve Record / record=$record / instrument=$instrument / EVENTID = $event_id");
         $this->emDebug("Target Record / instrument=$baseline_final_form / EVENTID = $baseline_event");
 
+        //if either are empty, bail
+        if (empty($baseline_config) || empty($followup_config)) {
+            $this->emError("baseline config ID or followup config ID is not set.  Unable to set up the hooks for this project ($project_id).");
+            return;
+            //$this->exitAfterHook();
+        }
+
+        //Participant_info was saved so check if configs need to be setup
         if ($instrument == $target_form) {
             $auto_create_field    = $this->getProjectSetting('auto-create-field');
 
@@ -70,10 +83,10 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
             //$this->emDebug($params, $results, $config_field); //exit;
             //$this->emDebug("CREATE FIELD ? : ".$results[0][$auto_create_field.'___1'] );
 
-            $baseline_set = array_search('baseline_dailies', array_column($results, 'rsp_prt_config_id'));
+            $baseline_set = array_search($baseline_config, array_column($results, 'rsp_prt_config_id'));
             $this->emDebug("RECID: " . $record . " KEY: " . $baseline_set . " KEY IS NULL: " . empty($baseline_set) . " : " . isset($baseline_set));
 
-            $fup_set = array_search('followup_dailies', array_column($results, 'rsp_prt_config_id'));
+            $fup_set = array_search($followup_config, array_column($results, 'rsp_prt_config_id'));
             $this->emDebug("RECID: " . $record . " KEY: " . $fup_set . " KEY IS NULL: " . empty($fup_set) . " : " . isset($fup_set));
 
             //get the currrent data
@@ -96,9 +109,9 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
 
                 }
             } else {
-                //assuming that 1 is baseline, 2 is followup
-                $bl_repeat_instance = 1;
-                $this->updateRSPParticipantInfoForm('baseline_dailies', $record, $event_id, $bl_date_field,$bl_repeat_instance,$entered_data);
+                //get the repeat instance for the baseline config
+                $bl_repeat_instance = $this->getInstanceIDForConfigID($record, $event_id, $baseline_config);  //should be 1
+                $this->updateRSPParticipantInfoForm($baseline_config, $record, $event_id, $bl_date_field,$bl_repeat_instance,$entered_data);
             }
 
 
@@ -115,7 +128,7 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
                 if ($results[0][$auto_create_field.'___1'] == 1) {
                     $fup_repeat_instance = $this->getNextRepeatingInstanceID($record, $target_instrument,$config_event);
                     $this->emDebug("NEXT Repeating Instance ID for  $record  IS ".$fup_repeat_instance);
-                    $this->updateRSPParticipantInfoForm('followup_dailies', $record, $event_id, $fup_date_field,$fup_repeat_instance,$entered_data);
+                    $this->updateRSPParticipantInfoForm($followup_config, $record, $event_id, $fup_date_field,$fup_repeat_instance,$entered_data);
 
 
                     //update the end date for gift card check
@@ -123,9 +136,9 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
                 }
 
             } else {
-                //assuming that 1 is baseline, 2 is followup
-                $fup_repeat_instance = 2;
-                $this->updateRSPParticipantInfoForm('followup_dailies', $record, $event_id, $fup_date_field,$fup_repeat_instance,$entered_data);
+                //get the repeat instance of the RSp_participant_info form where the config_id = $followup_config ('followup_dailies')
+                $fup_repeat_instance = $this->getInstanceIDForConfigID($record, $event_id, $followup_config); //should be 2
+                $this->updateRSPParticipantInfoForm($followup_config, $record, $event_id, $fup_date_field,$fup_repeat_instance,$entered_data);
             }
 
             //calculate the Survey end date for followup
@@ -137,7 +150,6 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
         }
 
         //  2. Calculate counts for baseline dailies
-
         if (($event_id == $baseline_event ) && ($instrument == $baseline_final_form)) {
             $this->emDebug("Checking the baseline");
             $this->checkSurveyCounts($record, $baseline_event, $baseline_final_form,$baseline_count_field, $config_event);
@@ -150,6 +162,40 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
         if (($event_id == $followup_event ) && ($instrument == $followup_final_form)) {
             $this->checkSurveyCounts($record, $followup_event, $followup_final_form,$followup_count_field, $config_event);
         }
+
+
+    }
+
+    /**
+     * Given the $config_id ('baseline_dailies', followup_dailies, etc) return the redcap_repeat_instance of the
+     * rsp_participant_info for this form
+     * @param $record
+     * @param $event_id
+     * @param $config_id
+     * @return mixed
+     */
+    private function getInstanceIDForConfigID($record, $event_id, $config_id) {
+        //hardcode portal config id
+        $config_id_field = 'rsp_prt_config_id';
+        $event_name = REDCap::getEventNames(true, false, $event_id);
+
+        $filter = "[" . $event_name . "][" . $config_id_field . "] = '$config_id'";
+
+        $params = array(
+            'return_format'    => 'json',
+            'records'          => $record,
+            'events'           => $event_id,
+            'fields'           => array(REDCap::getRecordIdField(), 'redcap_repeat_instance', $config_id_field),
+            'filterLogic'      => $filter
+        );
+
+        $q = REDCap::getData($params);
+
+        $records = json_decode($q, true);
+
+        //get the key of array where config_id is our search
+        $lookup = array_filter(array_column($records, $config_id_field, $config_id));
+        return $records[key($lookup)]['redcap_repeat_instance'];
 
 
     }
@@ -172,7 +218,7 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
 
 
         $records = json_decode($q, true);
-        $this->emDebug( $params,$records, count($records));
+        //$this->emDebug( $params,$records, count($records));
 
         //save the counts
         $data = array(
@@ -494,19 +540,16 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
 
             );
 
-            $this->emDebug('Started with $start_date.sveing to $target_field: '.$end_date->format('Y-m-d'), $data);
-        REDCap::saveData($data);
-        $response = REDCap::saveData('json', json_encode(array($data)));
+            //$this->emDebug('Started with $start_date.sveing to $target_field: '.$end_date->format('Y-m-d'), $data);
+            REDCap::saveData($data);
+            $response = REDCap::saveData('json', json_encode(array($data)));
 
-        if ($response['errors']) {
-            $msg = "Error while trying to add angio form.";
-            $this->emError($response['errors'], $data, $msg);
-        } else {
-            $this->emDebug("Successfully saved data to $target_field.");
-        }
-
-
-
+            if ($response['errors']) {
+                $msg = "Error while trying to add angio form.";
+                $this->emError($response['errors'], $data, $msg);
+            } else {
+                $this->emDebug("Successfully saved data to $target_field.");
+            }
         }
     }
 
