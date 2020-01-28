@@ -19,11 +19,10 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
     public $main_record;
 
     function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id, $survey_hash, $response_id, $repeat_instance = 1 ) {
-
+        $this->emDebug("Saving Record triggered: projectid =$project_id / record=$record / instrument=$instrument / EVENTID = $event_id / RepInstance=$repeat_instance");
         /**
          *  To triggered updates:
          *      1. On initial save, auto-create the RSP Participant Info forms for the baseline survey and followup surveys
-         *      2. If REDO baseline is selected, create a third Participant Info for the redo of the baseline surveys
          *
          */
         $baseline_config     = $this->getProjectSetting('baseline-portal-config-name');
@@ -50,8 +49,7 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
         $followup_invite_date_field      = $this->getProjectSetting('followup-dailies-invite-date-field');
 
 
-        $this->emDebug("baseline config is $baseline_config and followup_config is $follwoup_config");
-        $this->emDebug("SAve Record / record=$record / instrument=$instrument / EVENTID = $event_id");
+        $this->emDebug("baseline config is $baseline_config and followup_config is $followup_config");
         $this->emDebug("Target Record / instrument=$baseline_final_form / EVENTID = $baseline_event");
 
         //if either are empty, bail
@@ -522,6 +520,7 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
         \Hooks::call('redcap_save_record', array($this->getProjectId(), $record, $target_instrument, $config_event, null, null, null, $repeat_instance));
     }
 
+
     function updateSurveyEndDate($record, $start_date, $offset, $target_field, $target_event) {
 
 
@@ -545,7 +544,7 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
             $response = REDCap::saveData('json', json_encode(array($data)));
 
             if ($response['errors']) {
-                $msg = "Error while trying to add angio form.";
+                $msg = "Error while trying to save end date.";
                 $this->emError($response['errors'], $data, $msg);
             } else {
                 $this->emDebug("Successfully saved data to $target_field.");
