@@ -254,7 +254,8 @@ class ProjK23 extends \ExternalModules\AbstractExternalModule
 
         $current_hour = date('H');
 
-        while ($proj = db_fetch_assoc($enabled)) {
+        //while ($proj = db_fetch_assoc($enabled)) {
+        while($proj = $enabled->fetch_assoc()){
             $pid = $proj['project_id'];
             $this->emDebug("STARTING PID: ".$pid);
 
